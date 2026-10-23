@@ -1,0 +1,23 @@
+{
+  "study_area": {
+    "latitude_min": 41.9,
+    "latitude_max": 49.1,
+    "longitude_min": -125.0,
+    "longitude_max": -116.5
+  },
+  "elevation_m": {
+    "min": 500.0,
+    "max": 4500.0
+  },
+  "keep_elements": [
+    "TAVG", "PRCP", "SNOW"
+  ],
+  "date_range": {
+    "start": "1981-01-01",
+    "end": "2025-12-31"
+  },
+  "month_range": {
+    "start": "11",
+    "end": "3"
+  }
+}
