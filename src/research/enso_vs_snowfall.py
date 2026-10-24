@@ -6,23 +6,15 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).resolve().parent.parent.parent
 df = pd.read_csv(ROOT / "data/station-seasons_land_zone_ocean.csv")
 
-df0 = (
-    df[df["station_id"] == "USC00049053"]
-    .groupby("season")
-    .agg( 
-        enso=("enso", "mean"), 
-        snow=("SNOW", "sum")
-    )
-    .reset_index()
-)
+df = df[df["station_id"] == "US1WAFY0001"]
 
-fit = df0[["enso", "SNOW"]].dropna()
-m, b = np.polyfit(fit["enso"], fit["snow"], 1)
-r = fit["enso"].corr(fit["snow"])
+fit = df[["enso", "SNOW"]].dropna()
+m, b = np.polyfit(fit["enso"], fit["SNOW"], 1)
+r = fit["enso"].corr(fit["SNOW"])
 
 
 fig, ax = plt.subplots()
-ax.scatter(df0["enso"], df0["snow"])
+ax.scatter(df["enso"], df["SNOW"], s=25, alpha=0.5)
 ax.axvline(x=0, color="gray", linestyle="--")
 ax.set_xlabel("Mean ENSO Index")
 ax.set_ylabel("Yearly snowfall")
