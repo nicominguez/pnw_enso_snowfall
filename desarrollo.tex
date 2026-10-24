@@ -1,0 +1,179 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{graphicx,subcaption,booktabs,enumitem,amsmath,amssymb}
+\usepackage[hidelinks]{hyperref}
+
+\setlist{itemsep=1pt,topsep=3pt,parsep=0pt}
+\captionsetup{font=small,labelfont=bf}
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+
+% Figura con respaldo: si el fichero no existe, dibuja una caja con el texto indicado.
+% #1 ruta, #2 anchura, #3 texto de la caja
+\newcommand{\figoc}[3]{%
+  \IfFileExists{#1}{\includegraphics[width=#2]{#1}}{%
+    \fbox{\parbox[c][3.4cm][c]{\dimexpr#2-2\fboxsep-2\fboxrule\relax}{\centering\small\textit{#3}}}}}
+
+\begin{document}
+
+\section{Desarrollo}
+
+\subsection{Introducción}
+
+La nieve del \emph{Pacific Northwest} (PNW) es un recurso hídrico clave: al fundirse en primavera y verano alimenta el riego y el consumo de agua de la región \cite{she2007}. El ENSO (\emph{El Niño--Oscilación del Sur}), por su parte, es una de las principales fuentes de predictibilidad estacional, con meses de antelación \cite{hunter2006}. % TODO: confirmar que la cita respalda "principal predictor"
+Si medimos la nieve mediante su equivalente en agua (SWE; el indicador habitual es el del 1 de abril \cite{she2007}), el registro instrumental, aunque breve, muestra que en los inviernos de El Niño el PNW ha sido de forma consistente más cálido de lo normal y, con menos consistencia, más seco \cite{uw2024} (Fig.~\ref{fig:mapas}).
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{0.46\linewidth}
+    \centering
+    \figoc{inventory/selected_zones.png}{\linewidth}{Fig.~1.1 (provisional)}
+    \caption{ENSO $>1$: más cálido (TAVG$\uparrow$).}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.46\linewidth}
+    \centering
+    \figoc{inventory/selected_zones.png}{\linewidth}{Fig.~1.2 (provisional)}
+    \caption{ENSO $>1$: más seco (PRCP$\downarrow$).}
+  \end{subfigure}
+  \caption{Efecto esquemático de los inviernos con ENSO $>1$ sobre el PNW (imagen provisional).}
+  \label{fig:mapas}
+\end{figure}
+
+Aunque cada variable tiene sus propios efectos y ninguna explica por sí sola el SWE, este depende del ENSO a través de ellas:
+\[
+  \mathrm{ENSO}\uparrow \;\longrightarrow\; \mathrm{TAVG}\uparrow,\ \mathrm{PRCP}\downarrow \;\longrightarrow\; \mathrm{SWE}\downarrow .
+\]
+
+En una estación concreta, cada punto es una temporada (Fig.~\ref{fig:serie}). Además del ENSO, el SWE depende de otros factores, unos conocidos (temperatura, precipitación, viento, humedad y cómo se combinan en el tiempo) y otros no. Asumimos esa incertidumbre y nos centramos en el efecto del ENSO, que es exógeno: la nieve local no puede influir en él. Aun así, en la serie se observan tres cosas:
+\begin{enumerate}
+  \item \textbf{Tendencia a la baja.} El SWE desciende gradualmente (calentamiento a largo plazo, circulación atmosférica y otros factores desconocidos).
+  \item \textbf{Variedad dentro de cada fase.} No todos los años de El Niño o de La Niña se comportan igual: los inviernos de 2005 y 2015, con una nieve muy escasa, tuvieron un ENSO apenas débil \cite{uw2024}.
+  \item \textbf{Asimetría.} En general, El Niño se asocia con menos SWE que La Niña.
+\end{enumerate}
+Incluso la propia relación ENSO--SWE puede no ser estable en el tiempo: en el análisis de una estación de los Cascades resultó más débil en las últimas décadas \cite{uw2024}.
+
+\begin{figure}[ht]
+  \centering
+  \figoc{figures/year_enso_vs_snow.png}{0.55\linewidth}{Fig.~2: SWE vs.\ temporada en una estación (ejecutar year\_enso\_vs\_snow.py)}
+  \caption{SWE medio mensual en una estación: cada punto es una temporada (rojo: ENSO $\ge1$; azul: ENSO $\le-1$; gris: resto).} % TODO: ajustar el pie a lo que muestre la figura real
+  \label{fig:serie}
+\end{figure}
+
+La pregunta que guía el trabajo es si este efecto depende de la zona y de la elevación (es decir, de las coordenadas tridimensionales) dentro del PNW. Nuestra hipótesis es que sí: en zonas que reciben mucha nieve, como Mt~Baker, el efecto será mayor, y en elevaciones bajas, cerca del umbral lluvia--nieve, donde un pequeño aumento de temperatura convierte nieve en lluvia \cite{uw2024}, se notará más. Primero preparamos los datos y después los estudiamos.
+
+\subsection{¿Qué dataset queremos?}
+
+Queremos un conjunto de datos en el que cada instancia sea una \emph{temporada en una estación meteorológica}, es decir, unas 45 temporadas por estación (1981--2025), con:
+\begin{itemize}
+  \item \textbf{Variables identificativas:} \texttt{station\_id}, \texttt{season}, \texttt{station\_name}, \texttt{latitude}, \texttt{longitude}, \texttt{zone\_name}.
+  \item \textbf{Variable categórica:} \texttt{huc8}.
+  \item \textbf{Variables numéricas:} \texttt{elevation\_m}, \texttt{TAVG}, \texttt{PRCP}, \texttt{SWE}, \texttt{enso}.
+  \item \textbf{Variables de completitud:} \texttt{n\_TAVG}, \texttt{n\_PRCP}, \texttt{n\_SWE}, \texttt{n\_enso}.
+\end{itemize}
+Además, queremos instancias bien seleccionadas: estaciones con un rango de años largo e, idealmente, sin datos faltantes. Lo construimos en tres pasos, cada uno responde a una pregunta: qué puntos existen (Objetivo~1), qué estaciones son usables (Objetivo~2) y cómo estimamos el efecto del ENSO con ellas (Objetivo~3).
+
+\subsection{Objetivo 1: ¿Qué puntos existen?}
+
+Primer CSV (\texttt{station-seasons\_land\_zone\_ocean.csv}): juntar todos los datos.
+\begin{itemize}
+  \item Filtrar las estaciones candidatas por área de estudio ($41{,}9^\circ$--$49{,}1^\circ$\,N, $125{,}0^\circ$--$116{,}5^\circ$\,O) y rango de elevación (500--4500\,m), a partir de la lista maestra de estaciones de GHCN-Daily \cite{menne2012}.
+  \item Descargar de NCEI el resumen mensual de esas estaciones \cite{ncei}, con las variables TAVG, PRCP y SWE y los identificadores de la estación (id, nombre, coordenadas, elevación), entre las fechas límite elegidas y en unidades métricas.
+  \item Etiquetar cada estación-mes con su temporada según los meses elegidos (p.~ej.\ $[11,12,1,2,3]$): noviembre y diciembre pertenecen a la temporada del año siguiente.
+  \item Condensar estación-mes en estación-temporada: media para TAVG y suma para PRCP y SWE, junto con las variables $n_*$ (número de meses con dato) para juzgar la completitud. Una temporada sin datos queda como NaN, no como 0.
+  \item Clasificar cada estación por zona geográfica (cuenca HUC8): \texttt{huc8} y \texttt{zone\_name}.
+  \item Descargar el índice mensual de anomalía Niño~3.4 desde 1870 \cite{rayner2003,psl}; los valores faltantes quedan como NaN.
+  \item Etiquetar sus meses con la misma temporada, condensarlo a la media por temporada ($n_{\mathrm{enso}}$ indica el número de meses con dato) y añadirlo como \texttt{enso} a cada estación-temporada.
+\end{itemize}
+En este paso no se descarta ninguna instancia: lo incompleto se conserva marcado y la decisión de qué usar se toma en el Objetivo~2.
+
+\subsection{Objetivo 2: ¿Qué estaciones son usables?}
+
+Segundo CSV: verificar y limpiar. % TODO: los umbrales de abajo son propuestas, fijarlos tras ver los datos
+\begin{itemize}
+  \item \textbf{¿SWE $=0$ o NaN?} Un cero es un dato real (sobre todo a baja elevación); NaN es ausencia de medida. No deben mezclarse.
+  \item \textbf{Comparabilidad.} Como la suma depende de cuántos meses tengan dato, comparamos temporadas con $\mathrm{SWE\_mean}=\mathrm{SWE}/n_{\mathrm{SWE}}$.
+  \item \textbf{Completitud.} Reindexar a la malla completa estación $\times$ temporada (1981--2025), de modo que las temporadas ausentes sean filas explícitas con $n=0$. Fijar un mínimo de temporadas completas (p.~ej.\ 30 de 45), comprobar que las temporadas retenidas incluyen años de El Niño y de La Niña, y apartar de la regresión las estaciones casi siempre en cero.
+  \item \textbf{¿Hay balance entre zonas y elevaciones?} Contar las estaciones retenidas por zona y banda de elevación y compararlas con las descartadas: las que sobreviven suelen ser las de registro largo, y las conclusiones valdrán solo para ellas.
+\end{itemize}
+Para ver qué hay detrás de una estación usable, tomamos una (Fig.~\ref{fig:una}): cada punto es una temporada ($n\le45$) y la recta $\mathrm{SWE}\sim\mathrm{ENSO}$ resume su relación. Los NaN no aparecen en el gráfico, de modo que una estación con pocos puntos, o cuyos puntos no cubren valores altos y bajos del ENSO, da una recta poco fiable.
+
+\begin{figure}[ht]
+  \centering
+  \figoc{figures/enso_vs_snowfall.png}{0.55\linewidth}{Fig.~3: SWE vs.\ ENSO en una estación (ejecutar enso\_vs\_snowfall.py)}
+  \caption{Una estación: cada punto es una temporada ($n\le45$) y la recta resume la relación $\mathrm{SWE}\sim\mathrm{ENSO}$ (se indican $n$ y la $r$ de Pearson).}
+  \label{fig:una}
+\end{figure}
+
+El resultado es la lista de estaciones usables y un CSV limpio sobre el que trabajar.
+
+\subsection{Objetivo 3: ¿Cómo estimamos el efecto del ENSO?}
+
+Para estudiarlo, estimamos la pendiente de la recta $\mathrm{SWE}\sim\mathrm{ENSO}$ de cada estación (como la de la Fig.~\ref{fig:una}): esa pendiente mide el efecto del ENSO en la estación. No es un problema de clasificación (\emph{scikit-learn}), sino de cómo usar la regresión para estimar $\mathrm{SWE}\sim\mathrm{ENSO}$. Nos preguntamos:
+\begin{enumerate}
+  \item ¿Qué estaciones podemos considerar? ¿Tienen suficientes datos? (Objetivo~2)
+  \item De las seleccionadas, ¿usamos todos los puntos?
+  \item Dos temporadas consecutivas están correlacionadas: ¿cómo lo solucionamos?
+  \item ¿Hay balance entre zonas y elevaciones? (Objetivo~2)
+\end{enumerate}
+
+\paragraph{La dificultad: no hay 963 instancias independientes.} % TODO: confirmar el nº de estaciones tras la descarga final
+En cada temporada todas las estaciones tienen el mismo ENSO y, de hecho, incluso los datos temporales del ENSO implican dependencia entre temporadas consecutivas. Como mucho tenemos 45 instancias, y las estaciones-temporada de una misma zona no son independientes. Por tanto, para estimar la incertidumbre el remuestreo debe sacar temporadas completas: cada temporada sorteada se toma en todas las estaciones a la vez y, para respetar la correlación temporal, en bloques de temporadas consecutivas.
+
+\paragraph{Partial pooling.} Para que la recta de una estación se ``empuje'' hacia la de su grupo (zona y banda de elevación), de modo que no nos fiemos plenamente de solo 45 puntos (Fig.~\ref{fig:pooling}), usamos \emph{partial pooling} \cite{gelman2007}. Con $j$ la estación, $t$ la temporada y $g(j)$ su grupo,
+\[
+  y_{jt}=\alpha_j+\beta_j\,\mathrm{ENSO}_t+\gamma_j\,\mathrm{a\tilde no}_t+\varepsilon_{jt},
+  \qquad
+  \beta_j\sim\mathcal N\!\left(\mu_{g(j)},\tau^2\right),
+\]
+donde $y_{jt}=\log(\mathrm{SWE\_mean}_{jt}+\delta)$, con $\delta>0$ pequeño para admitir ceros. El logaritmo hace que $\beta_j$ sea un cambio relativo por unidad de ENSO, comparable entre estaciones muy nevadas y marginales. La estimación resultante es una media ponderada entre la pendiente propia y la del grupo,
+$\hat\beta_j^{\mathrm{pool}}=w_j\hat\beta_j+(1-w_j)\hat\mu_{g(j)}$ con $w_j=\tau^2/(\tau^2+\mathrm{se}_j^2)$: las estaciones ruidosas se acercan al grupo y las precisas casi no se mueven.
+
+\begin{figure}[ht]
+  \centering
+  \figoc{figures/partial_pooling.png}{0.5\linewidth}{Fig.~4: rectas por estación y recta del grupo}
+  \caption{Efecto esquemático del \emph{partial pooling}: las rectas de las estaciones se acercan a la del grupo.}
+  \label{fig:pooling}
+\end{figure}
+
+\paragraph{¿Qué más entra en el modelo?} % TODO: decidir
+Una tendencia temporal (\texttt{año}) sí, por la tendencia a la baja de la Introducción. TAVG y PRCP no: son el camino por el que actúa el ENSO ($\mathrm{ENSO}\to\mathrm{TAVG},\mathrm{PRCP}\to\mathrm{SWE}$) y controlarlos eliminaría parte del efecto que queremos medir.
+
+\paragraph{¿Ampliar el ENSO de 1981 a 1870?} Una alternativa sería ampliar la serie del ENSO, pero la regresión necesita pares (SWE, ENSO) y los registros de nieve de las estaciones no llegan tan atrás, de modo que el tamaño muestral lo marca el registro de nieve y no el del ENSO. Además, el índice es menos fiable en los primeros decenios. % TODO: revisar
+
+\paragraph{Resultado.} Para cada zona y banda de elevación, la pendiente con su intervalo de confianza es el resultado principal; F y $r^2$ se reportan como descriptivos (Tabla~\ref{tab:res}).
+
+\begin{table}[ht]
+  \centering
+  \caption{Esquema del resultado por zona y banda de elevación.}
+  \label{tab:res}
+  \begin{tabular}{llccc}
+    \toprule
+    \texttt{zone\_name} & \texttt{elev} (m) & $F$ & $r^2$ & IC(pendiente) \\
+    \midrule
+    \emph{Baker}        & 500--1500  & -- & -- & (--, --) \\
+                        & 1500--3000 & -- & -- & (--, --) \\
+                        & 3000--4500 & -- & -- & (--, --) \\
+    \emph{(otra zona)}  & 500--1500  & -- & -- & (--, --) \\
+                        & 1500--3000 & -- & -- & (--, --) \\
+                        & 3000--4500 & -- & -- & (--, --) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Extensión (opcional).} En lugar de bandas, usar la elevación de forma continua, $\beta_j=a+b\log(\mathrm{elev}_j)$, para representar el IC(pendiente) como una curva en función de la elevación y no como escalones.
+
+\begin{thebibliography}{9}
+\bibitem{uw2024} Office of the Washington State Climatologist (2024). \emph{ENSO's Effects on Snow Water Equivalent over the Years}. \url{https://climate.uw.edu/2024/01/09/ensos-effects-on-snow-water-equivalent-over-the-years/} % TODO: verificar autoría
+\bibitem{hunter2006} Hunter, T., Tootle, G. y Piechota, T. (2006). Oceanic-atmospheric variability and western U.S. snowfall. \emph{Geophysical Research Letters}, 33, L13706. doi:10.1029/2006GL026600.
+\bibitem{she2007} She, N. y Basketfield, D. (2007). Exploratory analysis of snowpack in Washington State. En \emph{World Environmental and Water Resources Congress 2007}, ASCE, pp.~1--25. doi:10.1061/40927(243)80.
+\bibitem{menne2012} Menne, M.\,J., Durre, I., Vose, R.\,S., Gleason, B.\,E. y Houston, T.\,G. (2012). An overview of the Global Historical Climatology Network-Daily database. \emph{Journal of Atmospheric and Oceanic Technology}, 29, 897--910.
+\bibitem{ncei} NOAA NCEI. \emph{Data Service API User Documentation}. \url{https://www.ncei.noaa.gov/support/access-data-service-api-user-documentation}
+\bibitem{rayner2003} Rayner, N.\,A. et al. (2003). Global analyses of sea surface temperature, sea ice, and night marine air temperature since the late nineteenth century. \emph{Journal of Geophysical Research}, 108(D14), 4407.
+\bibitem{psl} NOAA PSL. \emph{Niño 3.4 SST Index from the HadISST1.1}. \url{https://psl.noaa.gov/data/timeseries/month/Nino34/}
+\bibitem{gelman2007} Gelman, A. y Hill, J. (2007). \emph{Data Analysis Using Regression and Multilevel/Hierarchical Models}. Cambridge University Press.
+\end{thebibliography}
+
+\end{document}

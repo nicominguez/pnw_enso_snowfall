@@ -1,3 +1,14 @@
+"""
+- Filtrar estaciones candidatas por área de estudio y rango de elevación.
+- Seleccionar variables 'TAVG', 'PRCP, y 'SNOW' además de las identificativas (id, nombre, coordenadas, elevación) para cada estación-mes en fechas límite seleccionadas.
+- Añadir dimensión categórica para la temporada de la estación-mes según los meses seleccionados (e.g. [11, 12, 1, 2, 3]).
+- Condensar estación-mes en estación-temporada, aplicando media para 'TAVG' y suma para 'PRCP' y 'SNOW'. Añadir variables 'n_*' para juzgar completitud. Una temporada sin datos para alguna variable numérica queda como 'NaN', no 0.
+- Clasificar estación-temporada por zona geográfica con dimensiones 'huc8' y 'zone_name'.
+- Descargar índice mensual de anomalía Niño 3.4 desde el año 1870. Valores faltantes quedan como 'NaN', no 0.
+- Añadir dimension categórica para la temporada del mes a los índices mensuales y condensarlo a media por temporada. 'n_enso' indica número de meses con enso en una temporada.
+- Agregar dimensión enso a cada estación-temporada según la temporada.
+"""
+
 from pathlib import Path
 from urllib.parse import urlencode
 import json
