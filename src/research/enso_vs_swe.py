@@ -4,11 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-df = pd.read_csv(ROOT / "data/station-seasons_land_zone_ocean.csv")
+df = pd.read_csv(ROOT / "data/O2_station-seasons_clean.csv")
 
 df = df[df["station_id"] == "788:WA:SNTL"]
 
-fit = df[["enso", "SWE"]].dropna()
+fit = df[["enso", "SWE"]].dropna().copy()
+fit["SWE"] = np.log1p(fit["SWE"])
+fit["SWE"] = (fit["SWE"] - fit["SWE"].mean()) / fit["SWE"].std()
+fit["enso"] = (fit["enso"] - fit["enso"].mean()) / fit["enso"].std()
 m, b = np.polyfit(fit["enso"], fit["SWE"], 1)
 r = fit["enso"].corr(fit["SWE"])
 

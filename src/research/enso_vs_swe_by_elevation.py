@@ -5,7 +5,10 @@ import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[2]
 df = pd.read_csv(ROOT / "data" / "O2_station-seasons_clean.csv")
-df = df.dropna(subset=["station_id", "enso", "SWE", "elevation_m"])
+df = df.dropna(subset=["station_id", "enso", "SWE", "elevation_m"]).copy()
+df["SWE"] = np.log1p(df["SWE"])
+df["SWE"] = (df["SWE"] - df["SWE"].mean()) / df["SWE"].std()
+df["enso"] = (df["enso"] - df["enso"].mean()) / df["enso"].std()
 
 bins = [0, 500, 750, 1000, 1250, 1500, 1750, 2000, 2250, 2500,
         2750, 3000, 3250, 3500, 3750, 4000, np.inf]

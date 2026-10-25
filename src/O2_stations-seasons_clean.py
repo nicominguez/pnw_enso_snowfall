@@ -4,7 +4,7 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data" / "station-seasons_raw.csv"
+DATA = ROOT / "data" / "O1_station-seasons_raw.csv"
 CONFIG_PATH = ROOT / "config" / "station-year_filter.json"
 
 df = pd.read_csv(DATA)

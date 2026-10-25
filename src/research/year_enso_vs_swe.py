@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-df = pd.read_csv(ROOT / "data/station-seasons_land_zone_ocean.csv")
+df = pd.read_csv(ROOT / "data/O2_station-seasons_clean.csv")
 
 df = df[df["station_id"] == "788:WA:SNTL"]
 
