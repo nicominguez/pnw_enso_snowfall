@@ -3,15 +3,13 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[spanish]{babel}
-\usepackage[margin=1.8cm]{geometry}
+\usepackage[margin=1.65cm]{geometry}
 \usepackage{graphicx}
 \usepackage{subcaption}
 \usepackage{amsmath}
-\usepackage{booktabs}
-\usepackage[hidelinks]{hyperref}
 
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{3pt}
+\setlength{\parskip}{2.5pt}
 \captionsetup{font=small,labelfont=bf}
 
 \newcommand{\fig}[3]{%
@@ -27,35 +25,31 @@
 \maketitle
 
 \begin{abstract}
-Este trabajo estima si la relación entre el equivalente en agua de la nieve
-(\emph{Snow Water Equivalent}, SWE) y ENSO cambia con la elevación y la zona
-geográfica del Pacific Northwest (PNW). ENSO es un predictor externo con
-capacidad de anticipación estacional, pero no determina por sí solo el SWE:
-también intervienen la circulación atmosférica, la humedad, el viento, la
-fecha de las precipitaciones y otros factores no observados. Se construye una
-observación por estación y temporada, se conservan solo temporadas con cinco
-meses de SWE y estaciones con al menos 30 temporadas, y se auditan las
-distribuciones antes de modelar. Las principales limitaciones son el tamaño
-efectivo reducido, la dependencia temporal y la repetición del mismo ENSO en
-muchas estaciones; por ello, las pendientes y sus intervalos deben
-interpretarse como asociaciones descriptivas, no como efectos causales.
+Este trabajo estudia si la relación entre el equivalente en agua de la nieve
+(\emph{Snow Water Equivalent}, SWE) y ENSO cambia con la zona y la elevación
+en el Pacific Northwest (PNW). El reto no es solo encontrar una pendiente:
+los meses consecutivos comparten información, el mismo ENSO aparece en muchas
+estaciones y el registro disponible produce un tamaño efectivo mucho menor que
+el número de filas. Por eso se construyen temporadas comparables, se
+comprueba qué estaciones y regiones están representadas y se propone una
+regresión sencilla cuya incertidumbre respeta la dependencia por año. El
+resultado debe interpretarse como una asociación descriptiva, no como una
+predicción determinista ni como un efecto causal.
 \end{abstract}
 
-\section{Introducción}
+\section{Introducción: por qué mirar ENSO y SWE}
 
-El SWE es una reserva de agua relevante para anticipar condiciones de sequía o
-inundación. ENSO describe una oscilación acoplada entre el océano Pacífico
-tropical y la atmósfera. Es útil como variable externa porque no depende de
-una estación concreta y puede predecirse con cierta antelación a escala
-estacional \cite{hunter2006}.
-
-Durante El Niño suelen observarse condiciones más cálidas y, en el PNW,
-patrones de precipitación distintos de La Niña. Esa explicación intuitiva no
-es suficiente para predecir SWE: además intervienen humedad, viento,
-circulación atmosférica, fecha de la precipitación y el límite lluvia--nieve.
-El objetivo aquí no es usar temperatura y precipitación como predictores
-principales, sino estudiar la asociación de ENSO con SWE según elevación y
-zona, aceptando la incertidumbre debida a los factores no controlados.
+El SWE mide la cantidad de agua almacenada en la nieve y es útil para anticipar
+sequías o inundaciones. ENSO es una oscilación acoplada del Pacífico tropical
+y la atmósfera. Sus fases pueden anticiparse a escala estacional y son
+externas a una estación concreta, dos propiedades que hacen razonable
+estudiarlo como señal climática. Durante El Niño suelen cambiar la
+temperatura y la precipitación del PNW respecto a La Niña, pero esa historia
+no convierte a ENSO en una explicación completa del SWE: también intervienen
+humedad, viento, circulación atmosférica, fecha de la precipitación y el
+límite lluvia--nieve. Aquí no se usan temperatura ni precipitación como
+predictores principales; se estudia únicamente cómo se asocia ENSO con SWE
+según zona y elevación.
 
 \begin{figure}[ht]
 \centering
@@ -70,191 +64,211 @@ zona, aceptando la incertidumbre debida a los factores no controlados.
 \hfill
 \begin{subfigure}{.23\linewidth}\centering
 \fig{images/swe_2015_map.jpg}{\linewidth}{mapa}\caption{Mapa}\end{subfigure}
-\caption{Contexto espacial y climático del PNW. Estas figuras motivan la
-comparación regional, pero no constituyen un modelo causal.}
+\caption{Condiciones espaciales y climáticas del PNW en 2015. La misma
+región contiene contrastes de temperatura, precipitación y SWE; por eso una
+relación regional no puede atribuirse automáticamente a la elevación.}
 \label{fig:contexto}
 \end{figure}
 
-\section{Objetivos}
-\begin{enumerate}
-\item Construir observaciones comparables de estaciones SNOTEL y temporadas.
-\item Evaluar la representación de las estaciones, zonas, elevaciones, ENSO y
-SWE, identificando los límites de los datos utilizables.
-\item Estimar de forma sencilla cómo cambia la sensibilidad de SWE a ENSO con
-la elevación y la zona, controlando la tendencia temporal y la dependencia.
-\end{enumerate}
+La figura~\ref{fig:contexto} sugiere la pregunta central. Si dos estaciones
+reciben la misma señal ENSO, no necesariamente acumulan la misma nieve:
+pueden estar en zonas con distinta exposición o en elevaciones con distinta
+probabilidad de lluvia y nieve. La elevación puede modificar la respuesta,
+pero una zona como Mount Baker también puede acumular más nieve por su
+circulación y exposición, no simplemente por ser más alta. La hipótesis de
+trabajo es, por tanto, que la sensibilidad de SWE a ENSO no es uniforme; la
+comparación debe separar el nivel medio de nieve de la respuesta a ENSO y
+mantener visibles las incertidumbres que no podemos controlar.
 
-\section{Objetivo 1: observación y pregunta científica}
-
-Se usan estaciones SNOTEL del PNW entre 500 y 4500 m. Para cada estación se
-conservan sus coordenadas, elevación y zona HUC. Los meses se agrupan en una
-temporada hidrológica. El máximo estacional de SWE se prefiere a SWE en una
-fecha fija porque evita un desfase cuando el invierno comienza tarde o la
-acumulación máxima ocurre antes o después del 1 de abril. ENSO se resume como
-la media del índice durante la misma temporada.
-
-La agregación mensual también es una decisión estadística: meses consecutivos
-de SWE, precipitación y ENSO están fuertemente correlacionados. Tratar cada
-mes como una observación inflaría el tamaño muestral y estrecharía
-artificialmente la incertidumbre. Una temporada deja varios meses entre
-instancias y alinea la escala de ENSO con la pregunta de interés. No elimina
-por completo la dependencia, por lo que los intervalos finales deberían usar
-bloques de años completos. Esta condensación es un compromiso razonable, no
-una garantía de independencia.
-
-\section{Objetivo 2: datos utilizables y representación}
-
-\subsection{Completitud y cobertura temporal}
-
-Se excluyen las estación--temporada con menos de cinco mediciones de SWE. No
-se imputa el valor faltante: un máximo basado en cuatro meses no es comparable
-con uno basado en cinco, y una imputación usando otras estaciones podría
-introducir la relación ENSO--SWE que se intenta estimar, alterando la pendiente
-y reduciendo artificialmente su incertidumbre.
-
-Se exigen al menos 30 temporadas completas por estación. El umbral limita la
-inestabilidad de una pendiente basada en pocos años, aunque reduce
-aproximadamente a la mitad la información disponible. No es necesariamente
-mejor que exigir años consecutivos: una estación con años dispersos puede
-cubrir más fases de ENSO, mientras que una secuencia continua puede ser más
-representativa del régimen reciente. Por ello se informa del número y del
-rango temporal, en vez de interpretar \(30\) como una garantía de ausencia de
-sesgo. La eliminación puede producir sesgo de selección si las estaciones con
-registros cortos no son aleatorias; esta limitación debe acompañar cualquier
-comparación entre zonas.
-
-\subsection{Representación}
-
-Antes de ajustar, se inspeccionan las densidades de estaciones por zona y
-elevación, y las distribuciones de ENSO y SWE. ENSO se evalúa por temporadas
-únicas, no por filas estación--temporada: repetir el mismo índice para muchas
-estaciones daría una falsa impresión de mayor cobertura. No se fuerza una
-distribución uniforme de ENSO, porque modificar su frecuencia cambiaría la
-pregunta y podría introducir años artificiales. SWE es positivo y asimétrico;
-se muestra también \(\log(1+\mathrm{SWE})\) como diagnóstico, pero el modelo
-debe justificar la escala final con residuos y facilidad de interpretación.
-
-\begin{figure}[ht]
-\centering
-\fig{images/objective2_distributions.png}{.88\linewidth}{diagnósticos de representación}
-\caption{Diagnóstico de representación generado por
-\texttt{src/research/objective2\_distributions.py}. Las distribuciones no
-prueban independencia ni ausencia de sesgo; muestran dónde se concentra la
-información.}
-\label{fig:representacion}
-\end{figure}
-
-\section{Objetivo 3: sensibilidad y modelo}
-
-\subsection{Stampede Pass}
-
-Stampede Pass es una estación representativa de elevación alta. Las dos
-figuras siguientes separan una posible tendencia temporal de la relación
-ENSO--SWE:
+Antes de comparar zonas, conviene mirar una estación concreta. Stampede Pass
+permite ver qué patrón tendría que resumir un modelo y qué problemas aparecen
+antes de ajustar una recta:
 
 \begin{figure}[ht]
 \centering
 \begin{subfigure}{.48\linewidth}\centering
-\fig{images/year_enso_vs_swe.png}{\linewidth}{serie temporal}\caption{Serie temporal}\end{subfigure}
+\fig{images/year_enso_vs_swe.png}{\linewidth}{SWE por temporada}\caption{SWE y tiempo}\end{subfigure}
 \hfill
 \begin{subfigure}{.48\linewidth}\centering
-\fig{images/enso_vs_swe.png}{\linewidth}{relación}\caption{ENSO--SWE}\end{subfigure}
-\caption{Ejemplo para Stampede Pass.}
+\fig{images/enso_vs_swe.png}{\linewidth}{ENSO y SWE}\caption{ENSO--SWE}\end{subfigure}
+\caption{Exploración de Stampede Pass, estación de referencia dentro del
+intervalo de elevaciones analizado.}
 \label{fig:stampede}
 \end{figure}
 
-\begin{itemize}
-\item La serie sugiere una disminución temporal. Debe incluirse como
-covariable porque, si se omite, una tendencia de largo plazo puede atribuirse
-incorrectamente a ENSO.
-\item Hay gran variación para valores parecidos de ENSO. Estadísticamente,
-esto implica residuos grandes y una asociación no determinista: una pendiente
-media no predice bien cada temporada.
-\item Se observa descriptivamente más SWE en algunos años de La Niña que en
-años de El Niño, pero hay excepciones. En la figura~\ref{fig:stampede}b, la
-pendiente de esta estación parece relacionarse con ENSO; todavía no sabemos
-si se debe a su elevación, a la zona de Stampede Pass o a otros factores.
-\end{itemize}
+La figura~\ref{fig:stampede} deja tres advertencias. Primero, la serie sugiere
+un descenso de SWE con el tiempo; si se omite, parte de ese descenso podría
+atribuirse erróneamente a ENSO. Segundo, temporadas con valores parecidos de
+ENSO tienen SWE muy distintos: la asociación es probabilística, los residuos
+son grandes y una pendiente media no predice cada temporada. Tercero, la nube
+parece compatible con una relación negativa para esta estación, aunque hay
+excepciones y años secos incluso dentro de La Niña. La pendiente de la recta
+es la \emph{sensibilidad} que queremos comparar: el cambio medio esperado de
+SWE por una unidad de ENSO. La pregunta es si esa pendiente cambia con la
+elevación o la zona, no si Stampede Pass representa por sí sola todo el PNW.
 
-\subsection{Sensibilidad e hipótesis}
+\section{O1. Construir temporadas comparables}
 
-Llamamos sensibilidad a la variación esperada de SWE asociada con una unidad
-de cambio en ENSO. La pendiente de la línea de mejor ajuste es su estimación
-descriptiva. Si SWE es muy asimétrico, se puede modelar
-\(\log(1+\mathrm{SWE})\); entonces la pendiente se interpreta en una escala
-relativa y no como unidades directas de agua. La elección debe basarse en
-diagnósticos, no en asumir que el logaritmo siempre es superior.
+La primera pregunta es qué significa una observación. Si se conserva cada
+mes, se obtienen muchas filas, pero los meses contiguos comparten la misma
+tormenta, la misma capa de nieve y parte de la misma señal ENSO. Contarlos
+como observaciones independientes estrecharía artificialmente los intervalos
+de confianza. Además, medir SWE en una fecha fija puede desfavorecer un
+invierno tardío cuyo máximo ocurrió después del 1 de abril.
 
-La hipótesis es que la sensibilidad no es uniforme. Una elevación próxima al
-límite lluvia--nieve podría responder más porque pequeños cambios alteran el
-tipo de precipitación. Sin embargo, zonas como Mount Baker pueden recibir más
-nieve por su exposición y circulación, no necesariamente por elevación. Por
-ello se distingue el nivel medio de SWE de su sensibilidad a ENSO y se
-considera una interacción entre ENSO y elevación, además de diferencias entre
-zonas.
+Para cada estación \(j\) y temporada \(t\) se conserva el máximo de diciembre a
+abril y se resume ENSO en la misma ventana:
+\[
+Y_{jt}=\max_{m\in\{\mathrm{dic},\ldots,\mathrm{abr}\}}\mathrm{SWE}_{jtm},
+\qquad
+X_t=\frac{1}{5}\sum_{m}\mathrm{ENSO}_{tm}.
+\]
+El máximo describe la reserva estacional sin imponer cuándo ocurre el máximo;
+la media de ENSO alinea la exposición climática con esa temporada. Condensar
+reduce la dependencia dentro del invierno y evita fabricar precisión con
+meses casi repetidos. No produce independencia completa: temporadas
+adyacentes todavía pueden estar relacionadas y el mismo \(X_t\) se repite en
+varias estaciones. Por ello la condensación es un compromiso entre
+comparabilidad y resolución temporal, no una garantía estadística.
 
-\subsection{Modelo mínimo y dependencias}
+Se conservan las estaciones SNOTEL del HUC 17 entre 500 y 4500 m, junto con
+elevación y zona HUC6. Usar todos los meses daría más filas pero un tamaño
+muestral ilusorio; usar una fecha fija sería más sencillo pero introduciría
+desfases. La unidad estación--temporada es la opción que mejor representa la
+pregunta y hace explícita la dependencia que todavía queda.
 
-Con \(Y_{jt}\) igual a SWE o \(\log(1+\mathrm{SWE})\), \(X_t\) igual a ENSO,
-\(E_j\) elevación centrada y escalada, \(Z_j\) zona y \(T_t\) año centrado:
+\section{O2. Definir el conjunto analizable}
+
+La segunda pregunta no es cuántos registros existen, sino cuáles permiten
+comparar estaciones sin cambiar la definición de SWE entre unas y otras.
+Primero se exige que cada temporada tenga cinco mediciones de SWE. No se
+imputa una estación con cuatro: su máximo puede omitir precisamente el pico
+de acumulación. Tampoco se rellena con el promedio o la sensibilidad de otras
+estaciones. Eso conservaría una fila, pero introduciría en \(Y\) la relación
+ENSO--SWE que se pretende medir y haría la incertidumbre demasiado optimista.
+Eliminar la estación--temporada puede aumentar el sesgo por falta de datos,
+pero evita un sesgo mecánico en la pendiente y mantiene una respuesta
+homogénea.
+
+Después se conservan estaciones con al menos 30 temporadas completas. El
+umbral reduce la inestabilidad de una pendiente basada en pocos años, pero no
+garantiza ausencia de sesgo: una estación corta puede no ser aleatoria. Los
+años consecutivos aportan continuidad, mientras que años dispersos pueden
+cubrir más fases de ENSO; por eso deben conservarse también el número de
+temporadas, su rango y la diversidad de \(X_t\), no solo el indicador
+``30''. En el conjunto disponible quedan 229 estaciones y temporadas entre
+1981 y 2026: es un panel desbalanceado, no 229 series completas.
+
+Finalmente, hay que comprobar si el conjunto restante representa la pregunta.
+La figura~\ref{fig:representacion} responde cuatro cuestiones diferentes:
+cuántas estaciones hay por zona, dónde se concentra la elevación, qué valores
+de ENSO se observaron y cuánto domina la asimetría de SWE. ENSO no se
+uniforma, porque cambiar su frecuencia fabricaría años y alteraría la
+pregunta; su distribución observada es parte del diseño climático. SWE sí se
+examina también como \(\log(1+\mathrm{SWE})\): al ser positiva y asimétrica,
+esta escala reduce el peso de nevadas extremas y hace más razonable comparar
+variaciones relativas. La transformación no se acepta por costumbre: se
+compara con la escala original mediante residuos e interpretación.
+
+\begin{figure}[ht]
+\centering
+\fig{images/variable_distributions.png}{.90\linewidth}{representación}
+\caption{Distribución de estaciones por zona y elevación, ENSO por temporada
+y SWE en escala logarítmica. El ENSO se cuenta por temporada única, no por
+la repetición del mismo año en muchas estaciones.}
+\label{fig:representacion}
+\end{figure}
+
+\section{O3. Explicar la sensibilidad sin sobreinterpretarla}
+
+Una vez definido el panel, quedan tres problemas: el descenso temporal, la
+dependencia entre filas y un tamaño efectivo cercano al número de años, no al
+número de pares estación--temporada. El objetivo de O3 es mostrar cómo se
+podría traducir la pregunta a un modelo interpretable, no presentar una
+estimación causal definitiva.
+
+La respuesta se transforma como \(Y_{jt}^{0}=\log(1+\mathrm{SWE}_{jt})\).
+Para el modelo y las rectas de comparación se usa además
+\(Y_{jt}=(Y_{jt}^{0}-\overline{Y^{0}})/s_{Y^{0}}\). ENSO \(X_t\), año \(T_t\)
+y elevación \(E_j\) se centran y escalan:
+\[
+V^{*}=\frac{V-\overline V}{s_V}.
+\]
+Centrar resta la media y escalar divide por la desviación estándar. Así,
+cero representa una temporada o estación media, los coeficientes se
+comparan en cambios de una desviación estándar y el producto \(X_tE_j\) no
+queda dominado por las unidades de metros. La transformación logarítmica no
+``normaliza'' los datos: cambia la escala de la respuesta para que los
+extremos no dicten toda la recta. En la escala logarítmica original, un cambio
+\(\Delta\) se puede comunicar como \(100[\exp(\Delta)-1]\) por ciento; un
+coeficiente ajustado con \(Y\) estandarizado debe volver a convertirse antes
+de hacer esa interpretación.
+
+El modelo mínimo coherente con estas decisiones es
 \[
 Y_{jt}=\alpha+\beta_X X_t+\beta_E E_j+\beta_{XE}X_tE_j+
-\gamma_{Z_j}+\lambda T_t+\varepsilon_{jt}.
+\gamma_{Z_j}+\lambda T_t+\varepsilon_{jt},
 \]
+donde \(Z_j\) es una zona categórica y \(\gamma_{Z_j}\) ajusta diferencias
+medias entre zonas. \(\beta_X\) es la sensibilidad en la elevación media y
+la zona de referencia; \(\beta_{XE}\) indica cuánto cambia esa sensibilidad al
+subir una desviación estándar de elevación. \(\beta_E\) describe el nivel
+medio de SWE, no la sensibilidad. La interacción ENSO--zona podría añadirse
+si cada zona tiene suficientes estaciones y años; la interacción triple
+ENSO--elevación--zona no es una buena primera elección porque las zonas
+contienen rangos de elevación distintos y el tamaño efectivo no permite
+separar con estabilidad todos sus componentes.
 
-\(\beta_X\) es la sensibilidad en la elevación media y la zona de referencia;
-\(\beta_{XE}\) indica cuánto cambia con elevación. La interacción ENSO--zona
-puede añadirse si cada zona tiene suficiente representación. La interacción
-triple sería difícil de estimar porque las zonas no son uniformes, pueden
-contener un rango amplio de elevaciones y algunas pueden solaparse
-climáticamente. Por simplicidad se deja como extensión.
+La zona se modela como categoría, no como distancia: que dos cuencas sean
+geográficamente próximas no implica la misma exposición, y una zona puede
+contener muchas elevaciones. Las líneas de la figura~\ref{fig:modelo} son
+por eso exploratorias: ayudan a ver si la pendiente cambia por zona o por
+bandas de elevación, pero no sustituyen la regresión conjunta ni corrigen por
+tiempo.
 
-La elevación se centra y escala para que el intercepto sea interpretable y la
-interacción sea numéricamente estable. La zona se trata como categoría, no
-como una distancia: dos zonas cercanas no tienen por qué tener el mismo
-régimen. La misma ENSO aparece en muchas estaciones del año \(t\), de modo que
-el número de filas no equivale al tamaño efectivo. Para intervalos de
-confianza se deben remuestrear años completos, manteniendo juntas las
-estaciones de cada año; si persiste dependencia por estación, puede usarse
-un modelo jerárquico con interceptos por estación. No se presenta una
-causalidad sin un análisis adicional.
+La inferencia propuesta es un bootstrap por bloques de años: cada remuestra
+selecciona años completos y mantiene juntas todas las estaciones de cada año.
+Esto respeta que ENSO es común a las estaciones. No se aplica partial pooling
+en este informe. Un intercepto aleatorio por estación sería una extensión
+razonable para compartir información entre estaciones y estabilizar sus
+niveles medios, pero introduciría una decisión adicional y no está estimado
+por las rectas exploratorias disponibles. Declararlo explícitamente es
+preferible a presentar un modelo jerárquico como si ya hubiera sido ajustado.
+En una aplicación completa, se compararía el modelo sin y con partial pooling
+mediante validación por años, no solo por un \(R^2\) mayor.
 
-\subsection{Resultados que deben reportarse}
+La salida que sí debe reportarse es la pendiente de ENSO por zona y banda de
+elevación, su intervalo por bloques, el número de estaciones y temporadas y
+un \(R^2\) descriptivo. Un intervalo amplio informa de la limitación del
+tamaño efectivo; no justifica añadir interacciones. La figura~\ref{fig:modelo}
+organiza esa comparación visual: primero por zona, donde cambia la exposición
+climática, y después por elevación, donde puede cambiar el tipo de
+precipitación.
 
-Para cada zona y banda de elevación se debe reportar la pendiente de ENSO, su
-intervalo de confianza por bloques y \(R^2\) (o un estadístico \(F\) del
-término de interacción). También deben mostrarse el número de estaciones y
-temporadas. Un porcentaje puede calcularse solo si se especifica la escala:
-en el modelo logarítmico, \(100[\exp(\hat\beta)-1]\) es el cambio porcentual
-asociado a una unidad de ENSO, acompañado siempre de su intervalo. No se debe
-comparar un porcentaje de una zona grande con otro de una zona pequeña sin
-informar su tamaño efectivo.
+\begin{figure}[ht]
+\centering
+\begin{subfigure}{.49\linewidth}\centering
+\fig{images/enso_vs_swe_by_zone.png}{\linewidth}{zonas}\caption{Por zona}\end{subfigure}
+\hfill
+\begin{subfigure}{.49\linewidth}\centering
+\fig{images/enso_vs_swe_by_elevation.png}{\linewidth}{elevación}\caption{Por elevación}\end{subfigure}
+\caption{Rectas exploratorias con ENSO y \(\log(1+\mathrm{SWE})\) centrados y
+escalados. La pendiente se compara entre grupos; no se interpreta cada fila
+como una observación independiente.}
+\label{fig:modelo}
+\end{figure}
 
 \section{Conclusión}
 
-El análisis propone una ruta corta y reproducible: resumir meses a temporadas,
-evitar imputaciones que puedan fabricar la relación estudiada, exigir una
-cobertura temporal mínima, auditar la representación y ajustar un modelo
-interpretable con tendencia, elevación, zona e interacción ENSO--elevación.
-Las principales reservas son la pérdida de estaciones, el tamaño efectivo
-menor que el número de filas, la heterogeneidad espacial y los factores
-meteorológicos no observados. Por tanto, el resultado debe leerse como una
-estimación descriptiva de sensibilidad útil para comparar regiones, no como
-una predicción determinista de SWE.
-
-\begin{thebibliography}{6}
-\bibitem{hunter2006} Hunter, T., Tootle, G. y Piechota, T. (2006).
-Oceanic-atmospheric variability and western U.S. snowfall.
-\emph{Geophysical Research Letters}, 33, L13706.
-\bibitem{she2007} She, N. y Basketfield, D. (2007).
-Exploratory analysis of snowpack in Washington State.
-\emph{World Environmental and Water Resources Congress 2007}.
-\bibitem{uw2024} Office of the Washington State Climatologist (2024).
-\emph{ENSO's Effects on Snow Water Equivalent over the Years}.
-\url{https://climate.uw.edu/2024/01/09/ensos-effects-on-snow-water-equivalent-over-the-years/}
-\bibitem{gelman2007} Gelman, A. y Hill, J. (2007).
-\emph{Data Analysis Using Regression and Multilevel/Hierarchical Models}.
-Cambridge University Press.
-\end{thebibliography}
+La historia completa empieza con una señal climática útil pero incompleta.
+Para no convertir una colección de meses correlacionados en una falsa
+certeza, se define una temporada, se exige una cobertura mínima y se evita
+imputar el máximo faltante con información de la propia relación estudiada.
+Después se comprueba quién está representado y se transforma SWE solo cuando
+la escala y los residuos lo justifican. El modelo separa nivel medio,
+sensibilidad, zona, elevación y tendencia temporal; el bootstrap por años
+reconoce que el tamaño efectivo es limitado. El producto final es una forma
+defendible de comparar asociaciones ENSO--SWE bajo incertidumbre, no una
+afirmación de causalidad ni una regla determinista para cada invierno.
 
 \end{document}
