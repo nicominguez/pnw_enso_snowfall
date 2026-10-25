@@ -9,15 +9,12 @@ df = pd.read_csv(ROOT / "data/O2_station-seasons_clean.csv")
 df = df[df["station_id"] == "788:WA:SNTL"]
 
 fit = df[["enso", "SWE"]].dropna().copy()
-fit["SWE"] = np.log1p(fit["SWE"])
-fit["SWE"] = (fit["SWE"] - fit["SWE"].mean()) / fit["SWE"].std()
-fit["enso"] = (fit["enso"] - fit["enso"].mean()) / fit["enso"].std()
 m, b = np.polyfit(fit["enso"], fit["SWE"], 1)
 r = fit["enso"].corr(fit["SWE"])
 
 
 fig, ax = plt.subplots()
-ax.scatter(df["enso"], df["SWE"], s=25, c="gray", alpha=0.5)
+ax.scatter(fit["enso"], fit["SWE"], s=25, c="gray", alpha=0.5)
 ax.axvline(x=0, color="gray", linestyle="--")
 ax.set_xlabel("ENSO")
 ax.set_ylabel("SWE")
