@@ -3,12 +3,16 @@
     "min": 500.0,
     "max": 4500.0
   },
+  "keep_elements": [
+    "TAVG", "PRCP", "WTEQ"
+  ],
   "date_range": {
-    "start": "1981-01-01",
-    "end": "2025-12-31"
+    "start": "1980-11-01",
+    "end": "2026-4-01"
   },
   "month_range": {
-    "start": "11",
-    "end": "3"
-  }
+    "start": "12",
+    "end": "4"
+  },
+  "minimum_station_seasons": 30
 }
